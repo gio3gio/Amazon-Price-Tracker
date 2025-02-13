@@ -1,0 +1,52 @@
+```python
+import requests
+from bs4 import BeautifulSoup
+import smtplib
+import time
+
+# URL of the Amazon product
+URL = "https://www.amazon.com/Munich-Mens-Sneaker/dp/B0CPPQG76R?th=1&psc=1"  # Replace with your product URL
+
+# Headers to mimic a browser visit
+headers = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36"
+}
+
+def get_price():
+    page = requests.get(URL, headers=headers)
+    soup = BeautifulSoup(page.content, "lxml")
+
+    # Extract title and price
+    title = soup.find(id="productTitle").get_text().strip()
+    price = soup.find("span", class_="a-offscreen").get_text().strip()
+
+    print(f"Product: {title}")
+    print(f"Price: {price}")
+
+    return float(price.replace("$", ""))
+
+def send_email_notification(current_price):
+    sender_email = "your_email@gmail.com"
+    receiver_email = "receiver_email@gmail.com"
+    password = "your_password"
+
+    message = f"Subject: Price Drop Alert!\n\nThe price has dropped to ${current_price}. Check it out: {URL}"
+
+    with smtplib.SMTP("smtp.gmail.com", 587) as server:
+        server.starttls()
+        server.login(sender_email, password)
+        server.sendmail(sender_email, receiver_email, message)
+
+    print("Email notification sent!")
+
+def track_price():
+    last_price = None
+    while True:
+        current_price = get_price()
+        if last_price and current_price < last_price:
+            send_email_notification(current_price)
+        last_price = current_price
+        time.sleep(3600)  # Run every hour
+
+if __name__ == "__main__":
+    track_price()
